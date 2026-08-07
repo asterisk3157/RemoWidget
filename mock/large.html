@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>RemoWidget — Large レイアウト検討 v2</title>
+<style>
+  :root {
+    --w: 360px;
+    --radius: 24px;
+    --accent: #0a84ff;
+    --cool: #0a84ff;
+    --heat: #ff9f0a;
+    --dry:  #64d2ff;
+    --off:  #ff453a;
+    --fill: rgba(120,120,128,.32);
+    --fill-hover: rgba(150,150,158,.5);
+    --label: #8e8e93;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "SF Pro Text", "Hiragino Sans", sans-serif;
+    background: #1c1c1e;
+    color: #fff;
+    padding: 32px;
+    background-image:
+      radial-gradient(circle at 20% 20%, #2c3e50 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, #34495e 0%, transparent 50%);
+  }
+
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .lead { font-size: 13px; color: #98989d; margin-bottom: 28px; max-width: 940px; line-height: 1.6; }
+  .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .case { width: var(--w); }
+  .case h2 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .case .note { font-size: 12px; color: #98989d; margin-bottom: 12px; line-height: 1.5; min-height: 40px; }
+  .case.pick h2 { color: #30d158; }
+
+  /* ---- ウィジェット本体 ---- */
+  .widget {
+    width: var(--w);
+    height: var(--w);
+    border-radius: var(--radius);
+    background: rgba(60, 60, 67, 0.55);
+    backdrop-filter: blur(30px);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+  }
+
+  .btn {
+    border: none;
+    border-radius: 12px;
+    background: var(--fill);
+    color: #fff;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    flex: 1;
+    transition: background .12s;
+  }
+  /* ホバーで白飽和させない。背景をわずかに明るくするだけにして
+     アイコンと文字のコントラストを保つ（実機の「真っ白で見えない」対策） */
+  .btn:hover:not(:disabled) { background: var(--fill-hover); }
+  .btn:active:not(:disabled) { transform: scale(.97); }
+
+  .btn .lbl {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .btn svg { width: 18px; height: 18px; display: block; }
+  .btn:disabled { opacity: .3; cursor: default; }
+
+  /* 選択中: モード色で塗り、前景は必ず明示指定する */
+  .btn.sel-cool, .btn.sel-heat, .btn.sel-dry { background: var(--accent); color: #fff; }
+  .btn.sel-cool:hover, .btn.sel-heat:hover, .btn.sel-dry:hover { background: #3d9bff; }
+
+  .grid { display: flex; gap: 8px; }
+
+  .sensor { font-size: 30px; font-weight: 500; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+  .sensor .unit { font-size: 18px; color: var(--label); }
+  .caption { font-size: 10px; color: var(--label); margin-top: 2px; letter-spacing: .06em; text-transform: uppercase; }
+
+  .summary { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 5px; letter-spacing: .04em; }
+  .summary svg { width: 15px; height: 15px; }
+
+  .foot {
+    font-size: 10px; color: var(--label); margin-top: auto; padding-top: 10px;
+    letter-spacing: .04em;
+  }
+
+  .section-label {
+    font-size: 10px; color: var(--label); margin-bottom: 6px;
+    font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  }
+
+  .head { display: flex; justify-content: space-between; align-items: flex-start; }
+
+  .bigtemp { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .bigtemp .val { font-size: 46px; font-weight: 300; letter-spacing: -2px; font-variant-numeric: tabular-nums; min-width: 108px; text-align: center; }
+  .bigtemp .val .u { font-size: 22px; }
+  .bigtemp .step {
+    width: 54px; height: 54px; border-radius: 27px;
+    background: var(--fill); border: none; color: #fff;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .12s;
+  }
+  .bigtemp .step:hover:not(:disabled) { background: var(--fill-hover); }
+  .bigtemp .step:disabled { opacity: .28; cursor: default; }
+  .bigtemp .step svg { width: 20px; height: 20px; }
+
+  .dim { opacity: .45; }
+</style>
+</head>
+<body>
+
+<!-- SF Symbols 相当の形を SVG で定義（絵文字は使わない） -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- snowflake -->
+    <symbol id="i-cool" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <path d="M12 2v20M3.4 7l17.2 10M3.4 17L20.6 7"/>
+        <path d="M9.4 4.2 12 6.6l2.6-2.4M9.4 19.8 12 17.4l2.6 2.4"/>
+        <path d="M3.6 10.6 4.4 7.2 7.8 6.7M20.4 13.4l-.8 3.4-3.4.5"/>
+        <path d="M7.8 17.3l-3.4-.5-.8-3.4M16.2 6.7l3.4.5.8 3.4"/>
+      </g>
+    </symbol>
+    <!-- sun.max -->
+    <symbol id="i-heat" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <circle cx="12" cy="12" r="4.2"/>
+        <path d="M12 2.2v2.4M12 19.4v2.4M2.2 12h2.4M19.4 12h2.4M5.1 5.1l1.7 1.7M17.2 17.2l1.7 1.7M18.9 5.1l-1.7 1.7M6.8 17.2l-1.7 1.7"/>
+      </g>
+    </symbol>
+    <!-- humidity / drop -->
+    <symbol id="i-dry" viewBox="0 0 24 24">
+      <path d="M12 2.8c3.4 4 5.6 6.9 5.6 9.7A5.6 5.6 0 0 1 12 18a5.6 5.6 0 0 1-5.6-5.5c0-2.8 2.2-5.7 5.6-9.7z"
+            fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M9.5 20.8h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </symbol>
+    <!-- power -->
+    <symbol id="i-power" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M12 3v9"/>
+        <path d="M7.1 6.3a7.5 7.5 0 1 0 9.8 0"/>
+      </g>
+    </symbol>
+    <!-- lightbulb.max -->
+    <symbol id="i-bright" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <path d="M8.6 15.4a5.6 5.6 0 1 1 6.8 0c-.7.6-1 1.3-1.1 2.1h-4.6c-.1-.8-.4-1.5-1.1-2.1z"/>
+        <path d="M9.9 20.2h4.2"/>
+        <path d="M12 1.6v1.2M2.6 12h1.2M20.2 12h1.2M5.2 5.2l.9.9M17.9 17.9l.9.9M18.8 5.2l-.9.9M6.1 17.9l-.9.9" opacity=".85"/>
+      </g>
+    </symbol>
+    <!-- lightbulb.min（豆電球） -->
+    <symbol id="i-night" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <path d="M8.6 14.4a5.6 5.6 0 1 1 6.8 0c-.7.6-1 1.3-1.1 2.1h-4.6c-.1-.8-.4-1.5-1.1-2.1z"/>
+        <path d="M9.9 19.2h4.2"/>
+        <circle cx="12" cy="10.4" r="1.6" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+    <!-- lightbulb.slash（消灯） -->
+    <symbol id="i-lightoff" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <path d="M8.6 14.4a5.6 5.6 0 1 1 6.8 0c-.7.6-1 1.3-1.1 2.1h-4.6c-.1-.8-.4-1.5-1.1-2.1z"/>
+        <path d="M9.9 19.2h4.2"/>
+        <path d="M3.4 3.4l17.2 17.2"/>
+      </g>
+    </symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24">
+      <path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24">
+      <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-offline" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <path d="M12 18.5h.01M8.2 15a5.4 5.4 0 0 1 7.6 0M4.5 11.3a10.6 10.6 0 0 1 15 0"/>
+        <path d="M3.4 3.4l17.2 17.2"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div style="max-width:940px;margin-bottom:24px;padding:14px 16px;border-radius:10px;
+     background:rgba(255,159,10,.14);border:1px solid rgba(255,159,10,.4);font-size:13px;line-height:1.7">
+  <strong>※ これは設計検討時のモックで、実装とは一致しません。</strong><br>
+  実機の vibrant レンダリング（色が輝度に変換される）で潰れることが分かり、以下は廃案になりました。
+  記録として残しています。現在の仕様は <code>REQUIREMENTS.md</code> と <code>Sources/Widget/Views.swift</code> が正です。
+  <ul style="margin:8px 0 0 18px">
+    <li>選択中モードのアクセント色塗り → 濃さの差・縁取り・下部インジケータに変更</li>
+    <li>BRIGHT の白塗り → 廃止（白背景に前景が潰れるため）</li>
+    <li>照明は状態を表示しない片方向ボタンの想定だった → 現在は選択状態を表示する</li>
+    <li>Small / Medium サイズ → 廃止し Large のみ提供</li>
+  </ul>
+</div>
+<h1>RemoWidget — Large v2</h1>
+<p class="lead">
+  絵文字を廃止して SVG アイコンに統一。モードは英語ラベルを併記。
+  ホバーは背景をわずかに明るくするだけにして、白飽和で中身が消えないようにしました。
+  <strong>ボタンにマウスを乗せて確認してください。</strong>
+</p>
+
+<div class="row">
+
+  <!-- ============ 案A ============ -->
+  <div class="case pick">
+    <h2>案A: 温度を主役にする（推奨）</h2>
+    <p class="note">一番よく触る温度を大きな − ＋ に。選択中モードはモード色で塗り、前景色を明示。</p>
+    <div class="widget">
+      <div class="head" style="margin-bottom:16px">
+        <div>
+          <div class="sensor">24.0<span class="unit">℃</span></div>
+          <div class="caption">Room</div>
+        </div>
+        <div class="summary"><svg><use href="#i-cool"/></svg>COOL</div>
+      </div>
+
+      <div class="bigtemp" style="margin-bottom:18px">
+        <button class="step"><svg><use href="#i-minus"/></svg></button>
+        <div class="val">22<span class="u">℃</span></div>
+        <button class="step"><svg><use href="#i-plus"/></svg></button>
+      </div>
+
+      <div class="section-label">Air conditioner</div>
+      <div class="grid" style="height:54px; margin-bottom:14px">
+        <button class="btn sel-cool"><svg><use href="#i-cool"/></svg><span class="lbl">Cool</span></button>
+        <button class="btn"><svg><use href="#i-heat"/></svg><span class="lbl">Heat</span></button>
+        <button class="btn"><svg><use href="#i-dry"/></svg><span class="lbl">Dry</span></button>
+        <button class="btn"><svg><use href="#i-power"/></svg><span class="lbl">Off</span></button>
+      </div>
+
+      <div class="section-label">Light</div>
+      <div class="grid" style="height:54px">
+        <button class="btn"><svg><use href="#i-bright"/></svg><span class="lbl">Bright</span></button>
+        <button class="btn"><svg><use href="#i-night"/></svg><span class="lbl">Night</span></button>
+        <button class="btn"><svg><use href="#i-lightoff"/></svg><span class="lbl">Off</span></button>
+      </div>
+
+      <div class="foot">Last update 23:12</div>
+    </div>
+  </div>
+
+  <!-- ============ 案B ============ -->
+  <div class="case">
+    <h2>案B: 現状の並びのまま整える</h2>
+    <p class="note">並び順は今のまま、埋もれとラベルだけ直す最小変更。温度の重複を解消。</p>
+    <div class="widget">
+      <div class="head" style="margin-bottom:16px">
+        <div>
+          <div class="sensor">24.0<span class="unit">℃</span></div>
+          <div class="caption">Room</div>
+        </div>
+        <div class="summary"><svg><use href="#i-cool"/></svg>COOL 22℃</div>
+      </div>
+
+      <div class="section-label">Air conditioner</div>
+      <div class="grid" style="height:56px; margin-bottom:12px">
+        <button class="btn sel-cool"><svg><use href="#i-cool"/></svg><span class="lbl">Cool</span></button>
+        <button class="btn"><svg><use href="#i-heat"/></svg><span class="lbl">Heat</span></button>
+        <button class="btn"><svg><use href="#i-dry"/></svg><span class="lbl">Dry</span></button>
+        <button class="btn"><svg><use href="#i-power"/></svg><span class="lbl">Off</span></button>
+      </div>
+
+      <div class="section-label">Temperature</div>
+      <div class="grid" style="height:56px; margin-bottom:12px; align-items:center">
+        <button class="btn"><svg><use href="#i-minus"/></svg></button>
+        <div style="flex:1;text-align:center;font-size:26px;font-weight:500;font-variant-numeric:tabular-nums">22℃</div>
+        <button class="btn"><svg><use href="#i-plus"/></svg></button>
+      </div>
+
+      <div class="section-label">Light</div>
+      <div class="grid" style="height:56px">
+        <button class="btn"><svg><use href="#i-bright"/></svg><span class="lbl">Bright</span></button>
+        <button class="btn"><svg><use href="#i-night"/></svg><span class="lbl">Night</span></button>
+        <button class="btn"><svg><use href="#i-lightoff"/></svg><span class="lbl">Off</span></button>
+      </div>
+
+      <div class="foot">Last update 23:12</div>
+    </div>
+  </div>
+
+  <!-- ============ 停止中 ============ -->
+  <div class="case">
+    <h2>停止中（案A）</h2>
+    <p class="note">温度を淡色にして「今は効かない」ことを示す。Off ボタンは無効化。</p>
+    <div class="widget">
+      <div class="head" style="margin-bottom:16px">
+        <div>
+          <div class="sensor">24.0<span class="unit">℃</span></div>
+          <div class="caption">Room</div>
+        </div>
+        <div class="summary" style="color:var(--label)">OFF</div>
+      </div>
+
+      <div class="bigtemp dim" style="margin-bottom:18px">
+        <button class="step" disabled><svg><use href="#i-minus"/></svg></button>
+        <div class="val">22<span class="u">℃</span></div>
+        <button class="step" disabled><svg><use href="#i-plus"/></svg></button>
+      </div>
+
+      <div class="section-label">Air conditioner</div>
+      <div class="grid" style="height:54px; margin-bottom:14px">
+        <button class="btn"><svg><use href="#i-cool"/></svg><span class="lbl">Cool</span></button>
+        <button class="btn"><svg><use href="#i-heat"/></svg><span class="lbl">Heat</span></button>
+        <button class="btn"><svg><use href="#i-dry"/></svg><span class="lbl">Dry</span></button>
+        <button class="btn" disabled><svg><use href="#i-power"/></svg><span class="lbl">Off</span></button>
+      </div>
+
+      <div class="section-label">Light</div>
+      <div class="grid" style="height:54px">
+        <button class="btn"><svg><use href="#i-bright"/></svg><span class="lbl">Bright</span></button>
+        <button class="btn"><svg><use href="#i-night"/></svg><span class="lbl">Night</span></button>
+        <button class="btn"><svg><use href="#i-lightoff"/></svg><span class="lbl">Off</span></button>
+      </div>
+
+      <div class="foot">Last update 23:12</div>
+    </div>
+  </div>
+
+</div>
+
+<h1 style="margin-top:40px">その他の状態</h1>
+<p class="lead">暖房・除湿の選択色と、温度上限・オフライン時の見え方。</p>
+
+<div class="row">
+
+  <div class="case">
+    <h2>暖房中</h2>
+    <p class="note">暖房は橙。明るい背景色なので前景は黒にしてコントラストを確保。</p>
+    <div class="widget">
+      <div class="head" style="margin-bottom:16px">
+        <div><div class="sensor">24.0<span class="unit">℃</span></div><div class="caption">Room</div></div>
+        <div class="summary"><svg><use href="#i-heat"/></svg>HEAT</div>
+      </div>
+      <div class="bigtemp" style="margin-bottom:18px">
+        <button class="step"><svg><use href="#i-minus"/></svg></button>
+        <div class="val">22<span class="u">℃</span></div>
+        <button class="step"><svg><use href="#i-plus"/></svg></button>
+      </div>
+      <div class="section-label">Air conditioner</div>
+      <div class="grid" style="height:54px; margin-bottom:14px">
+        <button class="btn"><svg><use href="#i-cool"/></svg><span class="lbl">Cool</span></button>
+        <button class="btn sel-heat"><svg><use href="#i-heat"/></svg><span class="lbl">Heat</span></button>
+        <button class="btn"><svg><use href="#i-dry"/></svg><span class="lbl">Dry</span></button>
+        <button class="btn"><svg><use href="#i-power"/></svg><span class="lbl">Off</span></button>
+      </div>
+      <div class="section-label">Light</div>
+      <div class="grid" style="height:54px">
+        <button class="btn"><svg><use href="#i-bright"/></svg><span class="lbl">Bright</span></button>
+        <button class="btn"><svg><use href="#i-night"/></svg><span class="lbl">Night</span></button>
+        <button class="btn"><svg><use href="#i-lightoff"/></svg><span class="lbl">Off</span></button>
+      </div>
+      <div class="foot">Last update 23:12</div>
+    </div>
+  </div>
+
+  <div class="case">
+    <h2>除湿中 / 上限到達</h2>
+    <p class="note">30℃（冷房の上端）では ＋ を無効化。押しても何も起きない状態を見せない。</p>
+    <div class="widget">
+      <div class="head" style="margin-bottom:16px">
+        <div><div class="sensor">24.0<span class="unit">℃</span></div><div class="caption">Room</div></div>
+        <div class="summary"><svg><use href="#i-dry"/></svg>DRY</div>
+      </div>
+      <div class="bigtemp" style="margin-bottom:18px">
+        <button class="step"><svg><use href="#i-minus"/></svg></button>
+        <div class="val">30<span class="u">℃</span></div>
+        <button class="step" disabled><svg><use href="#i-plus"/></svg></button>
+      </div>
+      <div class="section-label">Air conditioner</div>
+      <div class="grid" style="height:54px; margin-bottom:14px">
+        <button class="btn"><svg><use href="#i-cool"/></svg><span class="lbl">Cool</span></button>
+        <button class="btn"><svg><use href="#i-heat"/></svg><span class="lbl">Heat</span></button>
+        <button class="btn sel-dry"><svg><use href="#i-dry"/></svg><span class="lbl">Dry</span></button>
+        <button class="btn"><svg><use href="#i-power"/></svg><span class="lbl">Off</span></button>
+      </div>
+      <div class="section-label">Light</div>
+      <div class="grid" style="height:54px">
+        <button class="btn"><svg><use href="#i-bright"/></svg><span class="lbl">Bright</span></button>
+        <button class="btn"><svg><use href="#i-night"/></svg><span class="lbl">Night</span></button>
+        <button class="btn"><svg><use href="#i-lightoff"/></svg><span class="lbl">Off</span></button>
+      </div>
+      <div class="foot">Last update 23:12</div>
+    </div>
+  </div>
+
+  <div class="case">
+    <h2>オフライン</h2>
+    <p class="note">Remo に届かない間も直前の値を出し続け、バッジと更新時刻で古さを伝える。</p>
+    <div class="widget">
+      <div class="head" style="margin-bottom:16px">
+        <div><div class="sensor">24.0<span class="unit">℃</span></div><div class="caption">Room</div></div>
+        <div class="summary" style="color:#ff9f0a"><svg><use href="#i-offline"/></svg>OFFLINE</div>
+      </div>
+      <div class="bigtemp" style="margin-bottom:18px">
+        <button class="step"><svg><use href="#i-minus"/></svg></button>
+        <div class="val">22<span class="u">℃</span></div>
+        <button class="step"><svg><use href="#i-plus"/></svg></button>
+      </div>
+      <div class="section-label">Air conditioner</div>
+      <div class="grid" style="height:54px; margin-bottom:14px">
+        <button class="btn sel-cool"><svg><use href="#i-cool"/></svg><span class="lbl">Cool</span></button>
+        <button class="btn"><svg><use href="#i-heat"/></svg><span class="lbl">Heat</span></button>
+        <button class="btn"><svg><use href="#i-dry"/></svg><span class="lbl">Dry</span></button>
+        <button class="btn"><svg><use href="#i-power"/></svg><span class="lbl">Off</span></button>
+      </div>
+      <div class="section-label">Light</div>
+      <div class="grid" style="height:54px">
+        <button class="btn"><svg><use href="#i-bright"/></svg><span class="lbl">Bright</span></button>
+        <button class="btn"><svg><use href="#i-night"/></svg><span class="lbl">Night</span></button>
+        <button class="btn"><svg><use href="#i-lightoff"/></svg><span class="lbl">Off</span></button>
+      </div>
+      <div class="foot" style="color:#ff9f0a">Last update 22:41</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

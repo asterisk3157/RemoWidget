@@ -1,0 +1,13 @@
+// Local.xcconfig.example
+//
+// このファイルを Local.xcconfig にコピーし、自分の Team ID を書いてください。
+//
+//   cp Local.xcconfig.example Local.xcconfig
+//
+// Team ID は次のコマンドで確認できます（括弧内の 10 文字）。
+//
+//   security find-identity -v -p codesigning
+//
+// Local.xcconfig は .gitignore されており、コミットされません。
+
+DEVELOPMENT_TEAM = XXXXXXXXXX

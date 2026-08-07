@@ -1,0 +1,29 @@
+# API の生レスポンス（機器 ID・MAC アドレス・シリアル番号を含む）
+appliances.json
+devices.json
+headers-*.txt
+*.local.json
+
+# 秘匿情報
+.env
+*.token
+
+# 観測ログ（取得時刻などの生活パターンが残る）
+rate-limit.log
+
+# アイコン生成の中間物
+icon.svg.png
+icon.iconset/
+
+# macOS / Xcode
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# .xcodeproj は project.yml からの生成物
+RemoWidget.xcodeproj/
+
+# Team ID を含むローカル設定（Local.xcconfig.example を複製して作る）
+Local.xcconfig

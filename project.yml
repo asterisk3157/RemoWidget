@@ -1,0 +1,68 @@
+name: RemoWidget
+
+options:
+  bundleIdPrefix: com.shironoir
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  groupSortPosition: none
+
+# Team ID は環境ごとに異なり、リポジトリにも残したくないので
+# Local.xcconfig（.gitignore 済み）から読む。Local.xcconfig.example を複製して使う。
+configFiles:
+  Debug: Local.xcconfig
+  Release: Local.xcconfig
+
+settings:
+  base:
+    # ローカル署名のみ。配布はしない（D-5）
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  RemoWidget:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/RemoKit
+      - path: Sources/App
+        excludes:
+          - "*.entitlements"
+          - Info.plist
+      - path: Sources/App/AppIcon.icns
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shironoir.remowidget
+        PRODUCT_NAME: RemoWidget
+        CODE_SIGN_ENTITLEMENTS: Sources/App/RemoWidget.entitlements
+        # AppGroupIdentifier を $(TeamIdentifierPrefix) で埋め込むため手書きの plist を使う
+        INFOPLIST_FILE: Sources/App/Info.plist
+        COMBINE_HIDPI_IMAGES: YES
+    dependencies:
+      - target: RemoWidgetExtension
+        embed: true
+
+  RemoWidgetExtension:
+    type: app-extension
+    platform: macOS
+    sources:
+      # RemoKit はフレームワークにせず両ターゲットへ同じソースをコンパイルする。
+      # 埋め込みフレームワークの署名・パス解決の面倒を避けるため。
+      - path: Sources/RemoKit
+      - path: Sources/Widget
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shironoir.remowidget.widget
+        PRODUCT_NAME: RemoWidgetExtension
+        INFOPLIST_FILE: Sources/Widget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/Widget/RemoWidgetExtension.entitlements
+        # 拡張自身ではなくアプリ本体の ID。App Group を共有するために必要
+        APP_BUNDLE_IDENTIFIER: com.shironoir.remowidget
+        SKIP_INSTALL: YES

@@ -49,4 +49,8 @@ Nature Remo には公式の macOS アプリが無く、Mac で作業中にエア
 - App Group は Team ID の前置が必須。ソースに直書きせず entitlements と Info.plist の変数で解決できる
 
 ## スクリーンショット
-（Large ウィジェット / 設定画面）
+
+デスクトップに配置した Large ウィジェット（除湿運転中・照明は豆電球）。
+選択中の項目は、壁紙の明るさに左右されないよう縁取りと下部のインジケータで示している。
+
+![Large ウィジェット](docs/widget.png)

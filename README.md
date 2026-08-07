@@ -10,6 +10,8 @@ Nature Remo に公式の macOS アプリは無く、Mac から操作するには
 
 <img src="icon.svg" width="96" alt="">
 
+<img src="docs/widget.png" width="360" alt="デスクトップに配置した RemoWidget">
+
 ## できること
 
 - **室温の表示**（Remo 本体のセンサー値、取得時刻つき）

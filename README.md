@@ -117,6 +117,18 @@ Sources/
 - **AppIntent には `openAppWhenRun = false` を明示** — 省略すると押すたびに設定ウィンドウが開きます
 - **App Group には Team ID の前置が必要** — ソースに直書きせず、entitlements と Info.plist で `$(TeamIdentifierPrefix)` を使えば環境依存を追い出せます
 
+## トラブルシュート
+
+### ボタンを押しても反応しない
+
+表示は出るのにボタンだけ反応しないときは、macOS が Intent の登録を見失っています。`log show` で chronod に `There is no metadata for ... Intent in com.shironoir.remowidget` が出ていれば該当します（拡張内の `Metadata.appintents` は正常で、ビルドの問題ではありません）。再登録して `linkd` / `chronod` を再起動すると直ります。
+
+```bash
+./build.sh reregister
+```
+
+それでも直らない場合は、ウィジェットを一度削除して置き直してください。
+
 ## ライセンス
 
 MIT

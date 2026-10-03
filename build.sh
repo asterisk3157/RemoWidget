@@ -3,6 +3,8 @@
 #
 #   ./build.sh          ビルドのみ
 #   ./build.sh install  ビルドして ~/Applications へ配置し、アプリを起動する
+#   ./build.sh reregister  ビルドせず、配置済みアプリの Intent 登録をやり直す
+#                          （ボタンが反応しないとき。README のトラブルシュート参照）
 #
 # ウィジェットは「アプリが Launch Services に登録されている」ことで
 # ウィジェットギャラリーに現れる。DerivedData 内のままだと不安定なため
@@ -10,6 +12,23 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
+
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+
+# アプリと拡張を登録し直し、Intent を管理する linkd / chronod を再起動する。
+# 登録が外れると「There is no metadata for ... Intent」でボタンだけ無反応になる。
+reregister() {
+  local app="$1"
+  "$LSREGISTER" -f -R -trusted "$app"
+  pluginkit -a "$app/Contents/PlugIns/RemoWidgetExtension.appex"
+  killall linkd chronod 2>/dev/null || true
+}
+
+if [ "${1:-}" = "reregister" ]; then
+  reregister "$HOME/Applications/RemoWidget.app"
+  echo "==> reregistered"
+  exit 0
+fi
 
 PROJECT=RemoWidget.xcodeproj
 SCHEME=RemoWidget
@@ -58,8 +77,7 @@ if [ "${1:-}" = "install" ]; then
 
   cp -R "$APP" "$DEST/"
   # Launch Services に登録し直してウィジェットギャラリーへ反映させる
-  /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
-    -f "$DEST/RemoWidget.app"
+  reregister "$DEST/RemoWidget.app"
 
   echo "==> installed: $DEST/RemoWidget.app"
   open "$DEST/RemoWidget.app"
